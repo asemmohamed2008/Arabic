@@ -1,0 +1,420 @@
+/* --- الثيم العصري الجديد (Modern Academy Theme) --- */
+:root {
+    --bg-main: #0f172a;        /* خلفية داكنة فخمة للسيستم */
+    --surface: #1e293b;        /* لون الكروت والحاويات */
+    --primary: #3b82f6;        /* أزرق زاهي تفاعلي */
+    --primary-hover: #2563eb;
+    --accent: #10b981;         /* أخضر نجاح / مفتاح */
+    --text-light: #f8fafc;     /* نص أبيض ناصع */
+    --text-muted: #94a3b8;     /* نص رمادي هادئ */
+    --border: #334155;         /* لون الحدود الخفيفة */
+    --radius: 12px;
+    --transition: all 0.3s ease;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Cairo', sans-serif;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-light);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+/* --- الهيدر (تظبيط الأماكن فقط بدون تعديل الألوان) --- */
+.main-header {
+    background-color: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 15px 0;
+    width: 100%;
+}
+
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between; /* بيفصل بين الشعار والروابط تماماً (اليمين واليسار) */
+    align-items: center;            /* بيخليهم على خط واحد أفقياً */
+}
+
+.logo-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo-text {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--text-light);
+    margin: 0;
+}
+
+/* تنسيق مجموعة الروابط عشان متتداخلش وتاخد مسافات مظبوطة */
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 20px; /* مسافة محترمة بين كل رابط والتاني */
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: var(--text-muted);
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.nav-links a:hover {
+    color: var(--primary);
+}
+/* تصميم صفحة الدخول والتسجيل (Auth Layout) */
+.auth-section {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 0;
+}
+
+.auth-card {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    padding: 40px;
+    border-radius: var(--radius);
+    width: 100%;
+    max-width: 450px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.auth-header h2 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+.auth-header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* تبديل التابات بين (تسجيل دخول / حساب جديد) */
+.auth-tabs {
+    display: flex;
+    background-color: var(--bg-main);
+    border-radius: 8px;
+    padding: 4px;
+    margin-bottom: 25px;
+    border: 1px solid var(--border);
+}
+
+.tab-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    padding: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: var(--transition);
+}
+
+.tab-btn.active {
+    background-color: var(--primary);
+    color: white;
+}
+
+/* الفورم وإدخالات البيانات */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.form-control {
+    width: 100%;
+    background-color: var(--bg-main);
+    border: 1px solid var(--border);
+    padding: 12px 15px;
+    border-radius: 8px;
+    color: white;
+    font-size: 1rem;
+    outline: none;
+    transition: var(--transition);
+}
+
+.form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* حقل مفتاح التسجيل المميز */
+.key-box {
+    background: rgba(16, 185, 129, 0.05);
+    border: 1px dashed var(--accent);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.key-box label {
+    color: var(--accent);
+}
+
+.btn-submit {
+    width: 100%;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-submit:hover {
+    background-color: var(--primary-hover);
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* الفوتر */
+.main-footer {
+    background-color: var(--surface);
+    border-top: 1px solid var(--border);
+    text-align: center;
+    padding: 20px 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+
+
+
+
+
+/* --- تنسيقات إضافية لصفحة الامتحانات (Dashboard Layout) --- */
+
+.welcome-text {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-left: 15px;
+}
+
+.btn-logout {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-logout:hover {
+    background-color: #ef4444;
+    color: white;
+}
+
+.dashboard-section {
+    flex: 1;
+    padding: 40px 0;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 35px;
+    background-color: var(--surface);
+    padding: 25px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+.dashboard-header h2 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 5px;
+}
+
+.dashboard-header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.student-badge-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--accent);
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 0.85srem;
+    font-weight: 700;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.active-dot {
+    width: 8px;
+    height: 8px;
+    background-color: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent);
+}
+
+/* شبكة الامتحانات المرتبة */
+.exams-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.exam-card {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.exam-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 4px;
+    height: 100%;
+    background-color: var(--primary);
+    transition: var(--transition);
+}
+
+.exam-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--primary);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+.exam-card:hover::before {
+    width: 8px;
+}
+
+.exam-info h4 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--text-light);
+    line-height: 1.4;
+}
+
+.exam-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 20px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.exam-meta span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-start {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+    width: 100%;
+}
+
+.btn-start:hover {
+    background-color: var(--primary-hover);
+}
+.btn-back-dashboard{
+    border: 2px solid var(--primary-hover);
+    border-radius: 20px;
+    padding: 5px;
+}
+.btn-back-dashboard:hover{
+    border: 2px solid rgb(255, 255, 255);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

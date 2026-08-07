@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مراجعة الإجابات والشرح - منصة لغة الضاد</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="images/11556ed682a6202096457d95623ca548.jpg">
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="container nav-container">
+            <div class="logo-box">
+                <span>📖</span>
+                <h1 class="logo-text" id="review-title">مراجعة الاختبار</h1>
+            </div>
+            <nav class="nav-links">
+                <a href="exams.html" class="btn-login-nav" style="background-color: var(--primary);">العودة للوحة التحكم</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="dashboard-section">
+        <div class="container" style="max-width: 800px;">
+            <div id="review-container">
+                <p style="color: var(--text-muted); text-align: center; padding: 30px;">جاري تحميل تفاصيل ومراجعة الامتحان من السيرفر...</p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="main-footer">
+        <div class="container">
+            <p>جميع الحقوق محفوظة © منصة لغة الضاد التعليمية 2026</p>
+        </div>
+    </footer>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+
+    <script>
+        window.onload = async function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const examId = urlParams.get('id');
+
+            const savedUser = JSON.parse(localStorage.getItem('studentSession'));
+            if (!savedUser) {
+                alert('يجب تسجيل الدخول أولاً!');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const resultsKey = `results_${savedUser.username}`;
+            const allResults = JSON.parse(localStorage.getItem(resultsKey)) || {};
+            const examResult = allResults[examId];
+
+            const container = document.getElementById('review-container');
+
+            if (!examId || !examResult) {
+                container.innerHTML = `<p style="color: #ef4444; text-align: center; padding: 30px;">⚠️ لا توجد نتائج مسجلة لهذا الاختبار!</p>`;
+                return;
+            }
+
+            try {
+                // جلب بيانات الامتحان الأساسية والأسئلة والشرح من فايربيس أونلاين
+                const docRef = await db.collection('exams').doc(examId).get();
+                if (!docRef.exists) {
+                    container.innerHTML = `<p style="color: #ef4444; text-align: center; padding: 30px;">عذراً، هذا الامتحان غير موجود على السيرفر حالياً.</p>`;
+                    return;
+                }
+
+                const exam = docRef.data();
+                document.getElementById('review-title').innerText = `مراجعة: ${exam.title || "الاختبار"}`;
+                container.innerHTML = "";
+
+                // بطاقة ملخص النتيجة
+                const summaryCard = document.createElement('div');
+                summaryCard.className = 'exam-card';
+                summaryCard.style.marginBottom = '25px';
+                summaryCard.style.textAlign = 'center';
+                summaryCard.innerHTML = `
+                    <h3 style="color: var(--accent); margin-bottom: 5px;">درجتك النهائية: ${examResult.score} / ${examResult.total}</h3>
+                    <p style="color: var(--text-muted);">النسبة المئوية: ${examResult.percentage}%</p>
+                `;
+                container.appendChild(summaryCard);
+
+                // استخراج الأسئلة
+                const questionsList = exam.questions || exam.questionsList || [];
+
+                if (questionsList.length === 0) {
+                    container.innerHTML += `<p style="color: var(--text-muted); text-align: center;">لا توجد أسئلة متاحة لهذا الامتحان.</p>`;
+                    return;
+                }
+
+                // عرض الأسئلة مع مقارنة إجابة الطالب وتوضيح الشرح
+                questionsList.forEach((q, index) => {
+                    const studentChosen = examResult.answers[index] !== undefined ? examResult.answers[index] : examResult.answers[q.id];
+                    const options = q.options || q.choices || [];
+                    const correctIndex = q.correct !== undefined ? q.correct : q.correctAnswer;
+                    const qText = q.text || q.question || q.title || `السؤال رقم ${index + 1}`;
+                    const qExplanation = q.explanation || "لا يوجد شرح مضاف لهذا السؤال.";
+
+                    let optionsHTML = '';
+                    options.forEach((opt, optIndex) => {
+                        let styleAttr = "background: var(--bg-main); border: 1px solid var(--border); color: var(--text-light);";
+                        let badgeText = "";
+
+                        if (optIndex === correctIndex) {
+                            styleAttr = "background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #10b981; font-weight: bold;";
+                            badgeText = " ✓ (الإجابة الصحيحة)";
+                        } else if (optIndex === studentChosen && studentChosen !== correctIndex) {
+                            styleAttr = "background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #ef4444;";
+                            badgeText = " ✗ (إجابتك)";
+                        }
+
+                        optionsHTML += `
+                            <div style="padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; ${styleAttr}">
+                                ${opt} ${badgeText}
+                            </div>
+                        `;
+                    });
+
+                    const card = document.createElement('div');
+                    card.className = 'exam-card';
+                    card.style.marginBottom = '20px';
+                    card.innerHTML = `
+                        <h4 style="margin-bottom: 15px; font-size: 1.1rem; color: var(--text-light);">السؤال (${index + 1}): ${qText}</h4>
+                        <div style="margin-bottom: 15px;">${optionsHTML}</div>
+                        <div style="background: rgba(59, 130, 246, 0.08); border-left: 4px solid var(--primary); padding: 12px; border-radius: 4px; font-size: 0.9rem; color: var(--text-muted);">
+                            💡 <strong>الشرح والتوضيح:</strong> ${qExplanation}
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+
+            } catch (error) {
+                console.error("خطأ في جلب بيانات المراجعة:", error);
+                container.innerHTML = `<p style="color: #ef4444; text-align: center; padding: 30px;">حدث خطأ أثناء تحميل بيانات المراجعة من السيرفر.</p>`;
+            }
+        };
+    </script>
+
+</body>
+</html>

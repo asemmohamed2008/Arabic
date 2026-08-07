@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم المعلم - منصة لغة الضاد</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="images/11556ed682a6202096457d95623ca548.jpg">
+    <style>
+        /* تصميم نظام التنبيهات الانسيابية (Toasts) الاحترافي */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .custom-toast {
+            min-width: 250px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideInLeft 0.4s ease, fadeOut 0.4s ease 2.6s forwards;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .toast-success { background-color: #10b981; }
+        .toast-error { background-color: #ef4444; }
+
+        @keyframes slideInLeft {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            to { opacity: 0; transform: translateY(-10px); }
+        }
+
+        .question-builder-box {
+            background: rgba(59, 130, 246, 0.03);
+            border: 1px solid var(--border);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="toast-container"></div>
+
+    <header class="main-header">
+        <div class="container nav-container">
+            <div class="logo-box">
+                <span>🔑</span>
+                <h1 class="logo-text">لوحة تحكم المعلمة</h1>
+            </div>
+            <nav class="nav-links">
+                <a href="index.html" class="btn-login-nav" style="background-color: var(--text-muted); text-decoration: none; padding: 8px 15px; border-radius: 6px; color: #fff;">الرئيسية</a>
+                <button onclick="logoutAdmin()" class="btn-logout" style="cursor: pointer; padding: 8px 15px; border-radius: 6px; border: none; background: #ef4444; color: #fff;">خروج</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="dashboard-section" style="padding: 30px 0;">
+        <div class="container">
+
+            <div class="dashboard-header" style="margin-bottom: 25px;">
+                <h2>إدارة المنصة ومتابعة الطلاب والامتحانات</h2>
+                <p>أنشئ امتحانات حقيقية بالأسئلة والاختيارات أونلاين، وتابع الطلاب حسب الصف والشعبة بكل سهولة.</p>
+            </div>
+
+            <div class="exam-card" style="margin-bottom: 30px; padding: 25px; border: 2px dashed var(--primary); background: rgba(59, 130, 246, 0.02);">
+                <h3 style="margin-bottom: 15px; color: var(--primary); font-size: 1.2rem;" id="form-section-title">📝 إنشاء امتحان جديد وإضافة الأسئلة</h3>
+
+                <form id="exam-meta-form" onsubmit="generateQuestionInputs(event)" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end;">
+                    <input type="hidden" id="editing-exam-id" value="">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 0.9rem; font-weight: bold;">عنوان الامتحان</label>
+                        <input type="text" id="exam-title" class="form-control" required placeholder="مثال: امتحان النحو">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 0.9rem; font-weight: bold;">الصف الدراسي</label>
+                        <select id="exam-grade" class="form-control">
+                            <option value="3-prep">الصف الثالث الإعدادي</option>
+                            <option value="1-sec">الصف الأول الثانوي</option>
+                            <option value="2-sec">الصف الثاني الثانوي</option>
+                            <option value="3-sec">الصف الثالث الثانوي</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 0.9rem; font-weight: bold;">نوع التعليم (الشعبة)</label>
+                        <select id="exam-edu-type" class="form-control">
+                            <option value="تعليم عام">تعليم عام</option>
+                            <option value="تعليم أزهري">تعليم أزهري</option>
+                            <option value="الكل">الكل (عام وأزهري)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 0.9rem; font-weight: bold;">الوقت المقدر</label>
+                        <input type="text" id="exam-time" class="form-control" required placeholder="مثال: 30 دقيقة">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 0.9rem; font-weight: bold;">عدد الأسئلة</label>
+                        <input type="number" id="exam-q-count" class="form-control" min="1" max="50" required placeholder="مثال: 3">
+                    </div>
+                    <button type="submit" class="btn-submit" id="generate-btn" style="padding: 11px; font-weight: bold; cursor: pointer;">توليد خانات الأسئلة ⬇️</button>
+                </form>
+
+                <div id="dynamic-questions-container"></div>
+            </div>
+
+            <h3 style="margin-bottom: 15px; font-size: 1.3rem; color: #f59e0b;">📦 مسودات الامتحانات المحفوظة (غير المنشورة)</h3>
+            <div class="exam-card" style="overflow-x: auto; padding: 0; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 30px;">
+                <table style="width: 100%; border-collapse: collapse; text-align: right;">
+                    <thead>
+                        <tr style="background: rgba(245, 158, 11, 0.1); border-bottom: 1px solid var(--border);">
+                            <th style="padding: 15px; color: #d97706;">عنوان الامتحان</th>
+                            <th style="padding: 15px; color: #d97706;">الصف الدراسي</th>
+                            <th style="padding: 15px; color: #d97706;">الشعبة</th>
+                            <th style="padding: 15px; color: #d97706;">الأسئلة والوقت</th>
+                            <th style="padding: 15px; color: #d97706;">الإجراءات (نشر / تعديل / حذف)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="drafts-table-body">
+                        <tr><td colspan="5" style="padding: 20px; text-align: center;">جاري تحميل المسودات...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 style="margin-bottom: 15px; font-size: 1.3rem; color: var(--accent);">📊 إدارة ومتابعة الامتحانات النشطة والسابقة</h3>
+            <div class="exam-card" style="overflow-x: auto; padding: 0; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 30px;">
+                <table style="width: 100%; border-collapse: collapse; text-align: right;">
+                    <thead>
+                        <tr style="background: rgba(59, 130, 246, 0.1); border-bottom: 1px solid var(--border);">
+                            <th style="padding: 15px; color: var(--primary);">عنوان الامتحان</th>
+                            <th style="padding: 15px; color: var(--primary);">الصف الدراسي</th>
+                            <th style="padding: 15px; color: var(--primary);">الشعبة</th>
+                            <th style="padding: 15px; color: var(--primary);">الأسئلة والوقت</th>
+                            <th style="padding: 15px; color: var(--primary);">الطلاب الممتحنون</th>
+                            <th style="padding: 15px; color: var(--primary);">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="exams-manage-table-body">
+                        <tr><td colspan="6" style="padding: 20px; text-align: center;">جاري تحميل الامتحانات النشطة...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="exam-card" style="margin-bottom: 25px; padding: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; background: rgba(59, 130, 246, 0.05); border: 1px solid var(--border); border-radius: 10px;">
+                <label for="grade-filter" style="font-weight: bold; color: var(--text-light);">🔍 تصفية الطلاب حسب الصف:</label>
+                <select id="grade-filter" onchange="filterStudents()" style="padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-light); flex: 1; min-width: 200px;">
+                    <option value="all">عرض كل الصفوف الدراسية</option>
+                    <option value="3-prep">الصف الثالث الإعدادي</option>
+                    <option value="1-sec">الصف الأول الثانوي</option>
+                    <option value="2-sec">الصف الثاني الثانوي</option>
+                    <option value="3-sec">الصف الثالث الثانوي</option>
+                </select>
+            </div>
+
+            <h3 style="margin-bottom: 15px; font-size: 1.3rem; color: var(--accent);">👥 سجل الطلاب المسجلين بالمنصة</h3>
+            <div class="exam-card" style="overflow-x: auto; padding: 0; border-radius: 10px; border: 1px solid var(--border);">
+                <table style="width: 100%; border-collapse: collapse; text-align: right;">
+                    <thead>
+                        <tr style="background: rgba(59, 130, 246, 0.1); border-bottom: 1px solid var(--border);">
+                            <th style="padding: 15px; color: var(--primary);">اسم الطالب</th>
+                            <th style="padding: 15px; color: var(--primary);">نوع التعليم (الشعبة)</th>
+                            <th style="padding: 15px; color: var(--primary);">المفتاح المستخدم</th>
+                            <th style="padding: 15px; color: var(--primary);">الصف الدراسي</th>
+                            <th style="padding: 15px; color: var(--primary);">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="students-table-body">
+                        <tr><td colspan="5" style="padding: 20px; text-align: center;">جاري التحميل...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="main-footer" style="padding: 20px 0; text-align: center; margin-top: 40px;">
+        <div class="container">
+            <p>جميع الحقوق محفوظة © منصة لغة الضاد التعليمية 2026</p>
+        </div>
+    </footer>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+
+    <script>
+        let allStudentsData = [];
+        let allExamsData = [];
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `custom-toast ${type === 'success' ? 'toast-success' : 'toast-error'}`;
+            toast.innerHTML = `<span>${type === 'success' ? '✅' : '❌'}</span> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        window.onload = function() {
+            loadStudentsData();
+            loadExamsData();
+        };
+
+        async function loadStudentsData() {
+            try {
+                const snapshot = await db.collection('students').get();
+                allStudentsData = [];
+                snapshot.forEach(doc => {
+                    allStudentsData.push({ id: doc.id, ...doc.data() });
+                });
+
+                if (allStudentsData.length === 0) {
+                    allStudentsData = JSON.parse(localStorage.getItem('systemAllAccounts')) || [];
+                }
+                renderTable(allStudentsData);
+            } catch (e) {
+                allStudentsData = JSON.parse(localStorage.getItem('systemAllAccounts')) || [];
+                renderTable(allStudentsData);
+            }
+        }
+
+        // جلب وعرض الامتحانات (المسودات والمنشورة)
+        async function loadExamsData() {
+            const draftsTbody = document.getElementById('drafts-table-body');
+            const examsTbody = document.getElementById('exams-manage-table-body');
+
+            try {
+                const snapshot = await db.collection('exams').get();
+                allExamsData = [];
+                snapshot.forEach(doc => {
+                    allExamsData.push({ id: doc.id, ...doc.data() });
+                });
+
+                const gradeLabels = {
+                    "3-prep": "الصف الثالث الإعدادي",
+                    "1-sec": "الصف الأول الثانوي",
+                    "2-sec": "الصف الثاني الثانوي",
+                    "3-sec": "الصف الثالث الثانوي"
+                };
+
+                // فصل الامتحانات إلى مسودات ومنشورة
+                const drafts = allExamsData.filter(exam => exam.isPublished === false);
+                const publishedExams = allExamsData.filter(exam => exam.isPublished === true || exam.isPublished === undefined);
+
+                // 1. عرض المسودات
+                if (drafts.length === 0) {
+                    draftsTbody.innerHTML = `<tr><td colspan="5" style="padding: 25px; text-align: center; color: var(--text-muted);">لا توجد مسودات محفوظة حالياً.</td></tr>`;
+                } else {
+                    draftsTbody.innerHTML = "";
+                    drafts.forEach(exam => {
+                        const tr = document.createElement('tr');
+                        tr.style.borderBottom = '1px solid var(--border)';
+                        tr.innerHTML = `
+                            <td style="padding: 15px; font-weight: bold; color: var(--text-light);">${exam.title || 'بدون عنوان'}</td>
+                            <td style="padding: 15px; color: var(--text-muted);">${gradeLabels[exam.grade] || exam.grade}</td>
+                            <td style="padding: 15px;"><span style="background: rgba(245, 158, 11, 0.1); color: #d97706; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold;">${exam.educationType || 'تعليم عام'}</span></td>
+                            <td style="padding: 15px; color: var(--text-muted);">أسئلة: ${exam.questionsCount || (exam.questions ? exam.questions.length : 0)} | الوقت: ${exam.time || 'غير محدد'}</td>
+                            <td style="padding: 15px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                <button onclick="publishDraft('${exam.id}', '${exam.title}')" style="background-color: #10b981; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; cursor: pointer;">🚀 نشر</button>
+                                <button onclick="editExam('${exam.id}')" style="background-color: #3b82f6; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; cursor: pointer;">✏️ تعديل</button>
+                                <button onclick="deleteExam('${exam.id}', '${exam.title}')" style="background-color: #ef4444; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; cursor: pointer;">🗑️ حذف</button>
+                            </td>
+                        `;
+                        draftsTbody.appendChild(tr);
+                    });
+                }
+
+                // 2. عرض الامتحانات النشطة المنشورة
+                if (publishedExams.length === 0) {
+                    examsTbody.innerHTML = `<tr><td colspan="6" style="padding: 25px; text-align: center; color: var(--text-muted);">لا توجد امتحانات منشورة حالياً.</td></tr>`;
+                } else {
+                    examsTbody.innerHTML = "";
+                    publishedExams.forEach(exam => {
+                        const tr = document.createElement('tr');
+                        tr.style.borderBottom = '1px solid var(--border)';
+
+                        let studentsCount = 0;
+                        allStudentsData.forEach(student => {
+                            let res = JSON.parse(localStorage.getItem(`results_${student.username}`)) || {};
+                            if (res[exam.id]) studentsCount++;
+                        });
+
+                        tr.innerHTML = `
+                            <td style="padding: 15px; font-weight: bold; color: var(--text-light);">${exam.title || 'بدون عنوان'}</td>
+                            <td style="padding: 15px; color: var(--text-muted);">${gradeLabels[exam.grade] || exam.grade}</td>
+                            <td style="padding: 15px;"><span style="background: rgba(59, 130, 246, 0.1); color: var(--primary); padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold;">${exam.educationType || 'تعليم عام'}</span></td>
+                            <td style="padding: 15px; color: var(--text-muted);">أسئلة: ${exam.questionsCount || (exam.questions ? exam.questions.length : 0)} | الوقت: ${exam.time || 'غير محدد'}</td>
+                            <td style="padding: 15px; font-weight: bold; color: #10b981;">👨‍🎓 ${studentsCount} طالب</td>
+                            <td style="padding: 15px;">
+                                <button onclick="deleteExam('${exam.id}', '${exam.title}')" style="background-color: #ef4444; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; cursor: pointer;">🗑️ حذف الامتحان</button>
+                            </td>
+                        `;
+                        examsTbody.appendChild(tr);
+                    });
+                }
+
+            } catch (error) {
+                console.error("خطأ في جلب الامتحانات:", error);
+                draftsTbody.innerHTML = `<tr><td colspan="5" style="padding: 25px; text-align: center; color: #ef4444;">حدث خطأ أثناء تحميل المسودات.</td></tr>`;
+                examsTbody.innerHTML = `<tr><td colspan="6" style="padding: 25px; text-align: center; color: #ef4444;">حدث خطأ أثناء تحميل الامتحانات.</td></tr>`;
+            }
+        }
+
+        // نشر مسودة محفوظة
+        async function publishDraft(examId, examTitle) {
+            if (!confirm(`هل أنت متأكد من رغبتك في نشر امتحان "${examTitle}" للطلاب الآن؟`)) return;
+            try {
+                await db.collection('exams').doc(examId).update({ isPublished: true });
+                showToast(`تم نشر امتحان "${examTitle}" بنجاح للطلاب!`, "success");
+                loadExamsData();
+            } catch (error) {
+                console.error(error);
+                showToast("حدث خطأ أثناء نشر الامتحان.", "error");
+            }
+        }
+
+        // تعديل امتحان أو مسودة
+        function editExam(examId) {
+            const exam = allExamsData.find(e => e.id === examId);
+            if (!exam) return;
+
+            document.getElementById('editing-exam-id').value = exam.id;
+            document.getElementById('exam-title').value = exam.title;
+            document.getElementById('exam-grade').value = exam.grade;
+            document.getElementById('exam-edu-type').value = exam.educationType;
+            document.getElementById('exam-time').value = exam.time;
+            document.getElementById('exam-q-count').value = exam.questionsCount || exam.questions.length;
+            document.getElementById('form-section-title').innerText = "✏️ تعديل تفاصيل الامتحان";
+            document.getElementById('generate-btn').innerText = "توليد خانات لتعديل الأسئلة ⬇️";
+
+            // توليد الخانات وملئها بالبيانات القديمة
+            generateQuestionInputsForEdit(exam.questions);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            showToast("تم جلب بيانات الامتحان للتعديل، قم بتعديل ما تريد ثم احفظه!", "success");
+        }
+
+        function generateQuestionInputsForEdit(questions) {
+            const count = questions.length;
+            const container = document.getElementById('dynamic-questions-container');
+
+            let html = `<div class="question-builder-box">
+                <h4 style="margin-bottom: 15px; color: var(--primary);">✍️ تعديل الأسئلة والاختيارات والشرح:</h4>`;
+
+            for (let i = 1; i <= count; i++) {
+                const q = questions[i - 1] || {};
+                html += `
+                    <div style="background: var(--bg-main); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--border);">
+                        <label style="font-weight: bold; display: block; margin-bottom: 5px;">السؤال رقم ${i}</label>
+                        <input type="text" id="q-text-${i}" class="form-control" required value="${q.text || ''}" placeholder="اكتب نص السؤال هنا..." style="margin-bottom: 10px;">
+
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px;">
+                            <input type="text" id="q-${i}-opt-0" class="form-control" required value="${q.options ? q.options[0] : ''}" placeholder="الاختيار الأول (أ)">
+                            <input type="text" id="q-${i}-opt-1" class="form-control" required value="${q.options ? q.options[1] : ''}" placeholder="الاختيار الثاني (ب)">
+                            <input type="text" id="q-${i}-opt-2" class="form-control" required value="${q.options ? q.options[2] : ''}" placeholder="الاختيار الثالث (ج)">
+                            <input type="text" id="q-${i}-opt-3" class="form-control" required value="${q.options ? q.options[3] : ''}" placeholder="الاختيار الرابع (د)">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                            <div>
+                                <label style="font-size: 0.85rem; font-weight: bold; color: var(--accent);">حدد الإجابة الصحيحة:</label>
+                                <select id="q-correct-${i}" class="form-control" style="margin-top: 5px;">
+                                    <option value="0" ${q.correct === 0 ? 'selected' : ''}>الاختيار الأول</option>
+                                    <option value="1" ${q.correct === 1 ? 'selected' : ''}>الاختيار الثاني</option>
+                                    <option value="2" ${q.correct === 2 ? 'selected' : ''}>الاختيار الثالث</option>
+                                    <option value="3" ${q.correct === 3 ? 'selected' : ''}>الاختيار الرابع</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size: 0.85rem; font-weight: bold; color: var(--primary);">الشرح والتوضيح (اختياري):</label>
+                                <input type="text" id="q-exp-${i}" class="form-control" value="${q.explanation || ''}" placeholder="اكتب سبب صحة الإجابة..." style="margin-top: 5px;">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `<button type="button" onclick="saveExamChanges(${count})" class="btn-submit" style="background-color: var(--accent); margin-top: 10px; cursor: pointer;">💾 حفظ التعديلات كمسودة</button></div>`;
+            container.innerHTML = html;
+        }
+
+        // دالة حذف امتحان أو مسودة نهائياً
+        async function deleteExam(examId, examTitle) {
+            if (!confirm(`هل أنت متأكد من رغبتك في حذف امتحان "${examTitle}" نهائياً من السيرفر؟`)) return;
+
+            try {
+                await db.collection('exams').doc(examId).delete();
+                showToast(`تم حذف امتحان "${examTitle}" بنجاح!`, "success");
+                loadExamsData();
+            } catch (error) {
+                console.error("خطأ في حذف الامتحان:", error);
+                showToast("حدث خطأ أثناء محاولة حذف الامتحان.", "error");
+            }
+        }
+
+        function renderTable(students) {
+            const tbody = document.getElementById('students-table-body');
+            tbody.innerHTML = "";
+
+            if (students.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="padding: 25px; text-align: center; color: var(--text-muted);">لا توجد تطابقات أو طلاب مسجلين حتى الآن.</td></tr>`;
+                return;
+            }
+
+            const gradeLabels = {
+                "3-prep": "الصف الثالث الإعدادي",
+                "1-sec": "الصف الأول الثانوي",
+                "2-sec": "الصف الثاني الثانوي",
+                "3-sec": "الصف الثالث الثانوي"
+            };
+
+            students.forEach(student => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid var(--border)';
+                const eduType = student.educationType || 'تعليم عام';
+                const badgeColor = eduType.includes('أزهر') ? '#10b981' : '#3b82f6';
+
+                tr.innerHTML = `
+                    <td style="padding: 15px; font-weight: bold; color: var(--text-light);">${student.username}</td>
+                    <td style="padding: 15px;"><span style="background: ${badgeColor}20; color: ${badgeColor}; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold;">${eduType}</span></td>
+                    <td style="padding: 15px; color: var(--primary); font-family: monospace; font-weight: bold;">🔑 ${student.usedKey || 'غير مسجل'}</td>
+                    <td style="padding: 15px; color: var(--text-muted);">${gradeLabels[student.grade] || student.grade}</td>
+                    <td style="padding: 15px; display: flex; gap: 8px; align-items: center;">
+                        <a href="student-details.html?username=${encodeURIComponent(student.username)}" class="btn-submit" style="display: inline-block; width: auto; padding: 6px 12px; font-size: 0.85rem; text-decoration: none;">عرض السجل</a>
+                        <button onclick="deleteStudent('${student.id || ''}', '${student.username}')" style="background-color: #ef4444; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; cursor: pointer;">حذف</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function deleteStudent(docId, username) {
+            if (!confirm(`هل أنت متأكد من رغبتك في حذف الطالب "${username}" نهائياً من المنصة؟`)) return;
+
+            try {
+                if (docId) {
+                    await db.collection('students').doc(docId).delete();
+                } else {
+                    const querySnapshot = await db.collection('students').where('username', '==', username).get();
+                    querySnapshot.forEach(async (doc) => {
+                        await doc.ref.delete();
+                    });
+                }
+
+                let localStudents = JSON.parse(localStorage.getItem('localStudents')) || {};
+                if (localStudents[username]) {
+                    delete localStudents[username];
+                    localStorage.setItem('localStudents', JSON.stringify(localStudents));
+                }
+
+                let allAccounts = JSON.parse(localStorage.getItem('systemAllAccounts')) || [];
+                allAccounts = allAccounts.filter(acc => acc.username !== username);
+                localStorage.setItem('systemAllAccounts', JSON.stringify(allAccounts));
+
+                let usedKeys = JSON.parse(localStorage.getItem('usedKeysList')) || [];
+                const deletedAcc = allStudentsData.find(s => s.username === username);
+                if (deletedAcc && deletedAcc.usedKey) {
+                    usedKeys = usedKeys.filter(k => k !== deletedAcc.usedKey);
+                    localStorage.setItem('usedKeysList', JSON.stringify(usedKeys));
+                }
+
+                localStorage.removeItem(`results_${username}`);
+
+                showToast(`تم حذف الطالب "${username}" بنجاح نهائياً!`, "success");
+                loadStudentsData();
+                loadExamsData();
+
+            } catch (error) {
+                console.error("خطأ أثناء الحذف:", error);
+                showToast("حدث خطأ أثناء محاولة حذف الطالب، يرجى المحاولة مرة أخرى.", "error");
+            }
+        }
+
+        function generateQuestionInputs(event) {
+            event.preventDefault();
+            const count = parseInt(document.getElementById('exam-q-count').value);
+            const container = document.getElementById('dynamic-questions-container');
+
+            let html = `<div class="question-builder-box">
+                <h4 style="margin-bottom: 15px; color: var(--primary);">✍️ أكتب تفاصيل ${count} أسئلة مع الشرح والتوضيح:</h4>`;
+
+            for (let i = 1; i <= count; i++) {
+                html += `
+                    <div style="background: var(--bg-main); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--border);">
+                        <label style="font-weight: bold; display: block; margin-bottom: 5px;">السؤال رقم ${i}</label>
+                        <input type="text" id="q-text-${i}" class="form-control" required placeholder="اكتب نص السؤال هنا..." style="margin-bottom: 10px;">
+
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px;">
+                            <input type="text" id="q-${i}-opt-0" class="form-control" required placeholder="الاختيار الأول (أ)">
+                            <input type="text" id="q-${i}-opt-1" class="form-control" required placeholder="الاختيار الثاني (ب)">
+                            <input type="text" id="q-${i}-opt-2" class="form-control" required placeholder="الاختيار الثالث (ج)">
+                            <input type="text" id="q-${i}-opt-3" class="form-control" required placeholder="الاختيار الرابع (د)">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                            <div>
+                                <label style="font-size: 0.85rem; font-weight: bold; color: var(--accent);">حدد الإجابة الصحيحة:</label>
+                                <select id="q-correct-${i}" class="form-control" style="margin-top: 5px;">
+                                    <option value="0">الاختيار الأول</option>
+                                    <option value="1">الاختيار الثاني</option>
+                                    <option value="2">الاختيار الثالث</option>
+                                    <option value="3">الاختيار الرابع</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size: 0.85rem; font-weight: bold; color: var(--primary);">الشرح والتوضيح (اختياري):</label>
+                                <input type="text" id="q-exp-${i}" class="form-control" placeholder="اكتب سبب صحة الإجابة..." style="margin-top: 5px;">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `<button type="button" onclick="publishExamWithQuestions(${count})" class="btn-submit" style="background-color: var(--accent); margin-top: 10px; cursor: pointer;">📦 حفظ الامتحان كمسودة جديدة</button></div>`;
+            container.innerHTML = html;
+            showToast("تم توليد حقول الأسئلة بنجاح، قم بملئها ثم احفظها كمسودة!", "success");
+        }
+
+        // حفظ الامتحان الجديد كمسودة (isPublished: false)
+        async function publishExamWithQuestions(count) {
+            const title = document.getElementById('exam-title').value.trim();
+            const grade = document.getElementById('exam-grade').value;
+            const educationType = document.getElementById('exam-edu-type').value;
+            const time = document.getElementById('exam-time').value.trim();
+
+            let questionsList = [];
+
+            for (let i = 1; i <= count; i++) {
+                const text = document.getElementById(`q-text-${i}`).value.trim();
+                const options = [
+                    document.getElementById(`q-${i}-opt-0`).value.trim(),
+                    document.getElementById(`q-${i}-opt-1`).value.trim(),
+                    document.getElementById(`q-${i}-opt-2`).value.trim(),
+                    document.getElementById(`q-${i}-opt-3`).value.trim()
+                ];
+                const correctAnswer = parseInt(document.getElementById(`q-correct-${i}`).value);
+                const explanation = document.getElementById(`q-exp-${i}`).value.trim() || "لا يوجد شرح مضاف لهذا السؤال.";
+
+                if (!text || options.some(opt => !opt)) {
+                    showToast(`يرجى إكمال بيانات السؤال رقم ${i}!`, "error");
+                    return;
+                }
+
+                questionsList.push({
+                    text: text,
+                    options: options,
+                    correct: correctAnswer,
+                    explanation: explanation
+                });
+            }
+
+            const examFinalData = {
+                title: title,
+                grade: grade,
+                educationType: educationType,
+                time: time,
+                questionsCount: count,
+                questions: questionsList,
+                isPublished: false, // مسودة افتراضياً
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            try {
+                await db.collection('exams').add(examFinalData);
+                showToast("🎉 تم حفظ الامتحان كمسودة بنجاح في قسم المسودات!", "success");
+                document.getElementById('exam-meta-form').reset();
+                document.getElementById('dynamic-questions-container').innerHTML = "";
+                loadExamsData();
+            } catch (error) {
+                console.error(error);
+                showToast("❌ حدث خطأ أثناء الحفظ، تحقق من الإنترنت.", "error");
+            }
+        }
+
+        // حفظ التعديلات على مسودة أو امتحان موجود
+        async function saveExamChanges(count) {
+            const examId = document.getElementById('editing-exam-id').value;
+            const title = document.getElementById('exam-title').value.trim();
+            const grade = document.getElementById('exam-grade').value;
+            const educationType = document.getElementById('exam-edu-type').value;
+            const time = document.getElementById('exam-time').value.trim();
+
+            let questionsList = [];
+
+            for (let i = 1; i <= count; i++) {
+                const text = document.getElementById(`q-text-${i}`).value.trim();
+                const options = [
+                    document.getElementById(`q-${i}-opt-0`).value.trim(),
+                    document.getElementById(`q-${i}-opt-1`).value.trim(),
+                    document.getElementById(`q-${i}-opt-2`).value.trim(),
+                    document.getElementById(`q-${i}-opt-3`).value.trim()
+                ];
+                const correctAnswer = parseInt(document.getElementById(`q-correct-${i}`).value);
+                const explanation = document.getElementById(`q-exp-${i}`).value.trim() || "لا يوجد شرح مضاف لهذا السؤال.";
+
+                if (!text || options.some(opt => !opt)) {
+                    showToast(`يرجى إكمال بيانات السؤال رقم ${i}!`, "error");
+                    return;
+                }
+
+                questionsList.push({
+                    text: text,
+                    options: options,
+                    correct: correctAnswer,
+                    explanation: explanation
+                });
+            }
+
+            const updatedData = {
+                title: title,
+                grade: grade,
+                educationType: educationType,
+                time: time,
+                questionsCount: count,
+                questions: questionsList
+            };
+
+            try {
+                await db.collection('exams').doc(examId).update(updatedData);
+                showToast("💾 تم تحديث وحفظ تفاصيل الامتحان بنجاح!", "success");
+
+                // إعادة تعيين النموذج لشكل الإنشاء العادي
+                document.getElementById('editing-exam-id').value = "";
+                document.getElementById('exam-meta-form').reset();
+                document.getElementById('dynamic-questions-container').innerHTML = "";
+                document.getElementById('form-section-title').innerText = "📝 إنشاء امتحان جديد وإضافة الأسئلة";
+                document.getElementById('generate-btn').innerText = "توليد خانات الأسئلة ⬇️";
+
+                loadExamsData();
+            } catch (error) {
+                console.error(error);
+                showToast("❌ حدث خطأ أثناء التحديث.", "error");
+            }
+        }
+
+        function filterStudents() {
+            const selectedGrade = document.getElementById('grade-filter').value;
+            if (selectedGrade === 'all') {
+                renderTable(allStudentsData);
+            } else {
+                const filtered = allStudentsData.filter(student => student.grade === selectedGrade);
+                renderTable(filtered);
+            }
+        }
+
+        function logoutAdmin() {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

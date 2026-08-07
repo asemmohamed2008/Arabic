@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة الشرف - منصة لغة الضاد</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="images/11556ed682a6202096457d95623ca548.jpg">
+    <style>
+        .leaderboard-header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--text-light);
+        }
+
+        /* تصميم كارت الطالب مع وضوح تام للنصوص والألوان */
+        .rank-card {
+            background: #ffffff;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            border-right: 6px solid var(--primary);
+            border: 1px solid var(--border);
+            transition: transform 0.2s ease;
+        }
+
+        .rank-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .rank-number {
+            width: 45px;
+            height: 45px;
+            background: var(--primary);
+            color: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        /* ألوان واضحة وصريحة لأسماء الطلاب وتفاصيلهم */
+        .student-name {
+            font-size: 1.15rem;
+            color: #1e293b;
+            font-weight: 800;
+        }
+
+        .student-details {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-top: 4px;
+            font-weight: 600;
+        }
+
+        /* تمييز المراكز الأولى بألوان مميزة وجميلة */
+        .top-1 { border-right-color: #f59e0b; background: rgba(245, 158, 11, 0.08); } /* ذهبي */
+        .top-2 { border-right-color: #94a3b8; background: rgba(148, 163, 184, 0.08); } /* فضي */
+        .top-3 { border-right-color: #d97706; background: rgba(217, 119, 6, 0.08); } /* برونزي */
+
+        .points-badge {
+            background: rgba(59, 130, 246, 0.15);
+            color: #2563eb;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-weight: 800;
+            font-size: 1rem;
+        }
+
+        .filter-container {
+            max-width: 400px;
+            margin: 0 auto 20px auto;
+        }
+
+        .filter-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .tab-btn {
+            padding: 10px 25px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: #ffffff;
+            color: black;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: #ffffff;
+            border-color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="container nav-container">
+            <div class="logo-box"><span>🏆</span> <h1 class="logo-text">لوحة الشرف</h1></div>
+            <nav class="nav-links">
+                <a href="exams.html" class="btn-login-nav" style="background-color: var(--text-muted); text-decoration: none; padding: 8px 15px; border-radius: 6px; color: #fff;">العودة للمنصة</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container" style="padding: 40px 0;">
+        <div class="leaderboard-header">
+            <h2>فرسان لغة الضاد 🛡️</h2>
+            <p>ترتيب الطلاب الأوائل بناءً على إجمالي النقاط والتحصيل الدراسي</p>
+        </div>
+
+        <div class="form-group filter-container">
+            <label style="font-weight: bold; display: block; margin-bottom: 8px; color: var(--text-light);">اختر الصف الدراسي:</label>
+            <select id="grade-filter" class="form-control" onchange="loadLeaderboard()">
+                <option value="3-prep">الصف الثالث الإعدادي</option>
+                <option value="1-sec">الصف الأول الثانوي</option>
+                <option value="2-sec">الصف الثاني الثانوي</option>
+                <option value="3-sec" selected>الصف الثالث الثانوي</option>
+            </select>
+        </div>
+
+        <div class="filter-tabs">
+            <button class="tab-btn active" onclick="switchEduType('تعليم عام', this)">تعليم عام</button>
+            <button class="tab-btn" onclick="switchEduType('تعليم أزهري', this)">تعليم أزهري</button>
+        </div>
+
+        <div id="leaderboard-list">
+            <p style="text-align: center; color: var(--text-muted); padding: 20px;">جاري جلب الفرسان من السيرفر...</p>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/leaderboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سجل تفاصيل الطالب - منصة لغة الضاد</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="images/11556ed682a6202096457d95623ca548.jpg">
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="container nav-container">
+            <div class="logo-box">
+                <span>📋</span>
+                <h1 class="logo-text" id="student-main-title">سجل تفاصيل الطالب</h1>
+            </div>
+            <nav class="nav-links">
+                <a href="admin.html" class="btn-back-dashboard">
+                    <span>⬅</span> العودة لوحة المعلمة
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="dashboard-section">
+        <div class="container" style="max-width: 900px;">
+
+            <div class="exam-card" style="margin-bottom: 30px; border-color: var(--primary);">
+                <h2 id="student-name-heading" style="color: var(--primary); margin-bottom: 10px;">اسم الطالب: --</h2>
+                <p id="student-meta-info" style="color: var(--text-muted); font-size: 1rem;">الصف الدراسي: -- | مفتاح الدخول: --</p>
+            </div>
+
+            <h3 style="margin-bottom: 20px; font-size: 1.3rem; color: var(--accent);">📖 اختبارات الطالب (اضغط على أي امتحان لعرض الأخطاء والتفاصيل)</h3>
+
+            <div id="student-exams-details-container">
+                <p style="color: var(--text-muted); text-align: center; padding: 20px;">جاري تحميل سجل امتحانات الطالب من السيرفر...</p>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="main-footer">
+        <div class="container">
+            <p>جميع الحقوق محفوظة © منصة لغة الضاد التعليمية 2026</p>
+        </div>
+    </footer>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+
+    <script>
+        const gradeLabels = {
+            "6-primary": "السادس الابتدائي",
+            "1-prep": "الأول الإعدادي",
+            "2-prep": "الثاني الإعدادي",
+            "3-prep": "الثالث الإعدادي",
+            "1-sec": "الأول الثانوي",
+            "2-sec": "الثاني الثانوي",
+            "3-sec": "الثالث الثانوي"
+        };
+
+        window.onload = async function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetUsername = urlParams.get('username');
+
+            if (!targetUsername) {
+                alert('⚠️ لم يتم تحديد الطالب!');
+                window.location.href = 'admin.html';
+                return;
+            }
+
+            // البحث عن بيانات الطالب
+            let student = null;
+            try {
+                const docRef = await db.collection('students').where('username', '==', targetUsername).get();
+                if (!docRef.empty) {
+                    student = docRef.docs[0].data();
+                }
+            } catch (e) {
+                console.log("خطأ في جلب الطالب من السيرفر، جار البحث محلياً...");
+            }
+
+            if (!student) {
+                const allAccounts = JSON.parse(localStorage.getItem('systemAllAccounts')) || [];
+                student = allAccounts.find(acc => acc.username === targetUsername);
+            }
+
+            if (!student) {
+                alert('⚠️ عذراً، هذا الطالب غير موجود في النظام!');
+                window.location.href = 'admin.html';
+                return;
+            }
+
+            document.getElementById('student-main-title').innerText = `سجل الطالب: ${student.username}`;
+            document.getElementById('student-name-heading').innerText = `👤 الطالب: ${student.username}`;
+            document.getElementById('student-meta-info').innerHTML = `📚 الصف الدراسي: <strong>${gradeLabels[student.grade] || student.grade}</strong> | مفتاح الدخول: <code style="color: var(--accent);">${student.usedKey || 'غير معروف'}</code>`;
+
+            // جلب نتائج الطالب المخزنة محلياً
+            const resultsKey = `results_${student.username}`;
+            const studentResults = JSON.parse(localStorage.getItem(resultsKey)) || {};
+
+            const container = document.getElementById('student-exams-details-container');
+            container.innerHTML = "";
+
+            const examIds = Object.keys(studentResults);
+
+            if (examIds.length === 0) {
+                container.innerHTML = `
+                    <div class="exam-card" style="text-align: center; padding: 30px;">
+                        <p style="color: var(--text-muted); font-size: 1.1rem;">هذا الطالب لم يقم بأي اختبار حتى الآن.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // جلب تفاصيل كل امتحان حلّه الطالب من فايربيس أونلاين
+            for (const examId of examIds) {
+                const resData = studentResults[examId];
+                let examData = null;
+
+                try {
+                    const examDoc = await db.collection('exams').doc(examId).get();
+                    if (examDoc.exists) {
+                        examData = examDoc.data();
+                    }
+                } catch (err) {
+                    console.error("خطأ في جلب الامتحان:", err);
+                }
+
+                if (!examData) continue;
+
+                const questionsList = examData.questions || examData.questionsList || [];
+                let wrongQuestionsHTML = "";
+                let wrongCount = 0;
+
+                questionsList.forEach((q, index) => {
+                    // دعم قراءة الإجابة المختارة للطالب سواء بالـ index أو بالـ id
+                    const studentChosen = resData.answers[index] !== undefined ? resData.answers[index] : resData.answers[q.id];
+                    const options = q.options || q.choices || [];
+                    const correctIndex = q.correct !== undefined ? q.correct : q.correctAnswer;
+                    const qText = q.text || q.question || q.title || `السؤال رقم ${index + 1}`;
+                    const qExplanation = q.explanation || "لا يوجد شرح مضاف لهذا السؤال.";
+
+                    if (studentChosen !== correctIndex) {
+                        wrongCount++;
+                        let optionsHTML = "";
+                        options.forEach((opt, optIndex) => {
+                            let styleAttr = "background: var(--bg-main); border: 1px solid var(--border); color: var(--text-light);";
+                            let badgeText = "";
+
+                            if (optIndex === correctIndex) {
+                                styleAttr = "background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #10b981; font-weight: bold;";
+                                badgeText = " ✓ (الإجابة الصحيحة)";
+                            } else if (optIndex === studentChosen) {
+                                styleAttr = "background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #ef4444;";
+                                badgeText = " ✗ (إجابة الطالب الخاطئة)";
+                            }
+
+                            optionsHTML += `
+                                <div style="padding: 10px 14px; border-radius: 8px; margin-bottom: 6px; font-size: 0.95rem; ${styleAttr}">
+                                    ${opt} ${badgeText}
+                                </div>
+                            `;
+                        });
+
+                        wrongQuestionsHTML += `
+                            <div style="background: var(--bg-main); border: 1px solid var(--border); padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                                <h5 style="margin-bottom: 10px; color: var(--text-light); font-size: 1rem;">${qText}</h5>
+                                <div style="margin-bottom: 10px;">${optionsHTML}</div>
+                                <div style="background: rgba(59, 130, 246, 0.08); border-left: 4px solid var(--primary); padding: 10px; border-radius: 4px; font-size: 0.85rem; color: var(--text-muted);">
+                                    💡 <strong>الشرح والتوضيح:</strong> ${qExplanation}
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+
+                if (wrongCount === 0) {
+                    wrongQuestionsHTML = `<p style="color: #10b981; font-weight: bold; text-align: center; padding: 10px;">🎉 ممتاز! هذا الطالب أجاب على جميع أسئلة الامتحان بشكل صحيح ولم يرتكب أي أخطاء.</p>`;
+                }
+
+                // عرض بطاقة الامتحان للطالب بتصميم Accordion انسيابي
+                const examCardBox = document.createElement('div');
+                examCardBox.className = 'exam-card';
+                examCardBox.style.marginBottom = '20px';
+                examCardBox.style.padding = '0';
+                examCardBox.style.overflow = 'hidden';
+
+                examCardBox.innerHTML = `
+                    <div class="accordion-header" onclick="toggleAccordion(this)" style="padding: 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: rgba(59, 130, 246, 0.03); transition: background 0.3s;">
+                        <div>
+                            <h3 style="color: var(--primary); font-size: 1.1rem; margin-bottom: 5px;">📖 ${examData.title || "امتحان"}</h3>
+                            <span style="color: var(--text-muted); font-size: 0.9rem;">اضغط هنا لعرض تفاصيل الأخطاء والإجابات</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <span style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; color: #10b981; padding: 6px 14px; border-radius: 8px; font-weight: bold; font-size: 0.95rem;">
+                                الدرجة: ${resData.score} / ${resData.total} (${resData.percentage}%)
+                            </span>
+                            <span class="arrow-icon" style="font-size: 1.2rem; transition: transform 0.3s; color: var(--text-muted);">▼</span>
+                        </div>
+                    </div>
+                    <div class="accordion-body" style="max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; padding: 0 20px;">
+                        <div style="padding-top: 15px; border-top: 1px solid var(--border); margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 15px; font-size: 1rem; color: var(--accent);">⚠️ الأسئلة التي اخطأ فيها الطالب فقط:</h4>
+                            ${wrongQuestionsHTML}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(examCardBox);
+            }
+        };
+
+        function toggleAccordion(header) {
+            const body = header.nextElementSibling;
+            const arrow = header.querySelector('.arrow-icon');
+
+            if (body.style.maxHeight && body.style.maxHeight !== "0px") {
+                body.style.maxHeight = "0px";
+                arrow.style.transform = "rotate(0deg)";
+            } else {
+                body.style.maxHeight = body.scrollHeight + 500 + "px";
+                arrow.style.transform = "rotate(180deg)";
+            }
+        }
+    </script>
+</body>
+</html>

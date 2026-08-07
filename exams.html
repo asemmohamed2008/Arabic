@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم الطالب - منصة لغة الضاد</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="images/11556ed682a6202096457d95623ca548.jpg">
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="container nav-container">
+            <div class="logo-box">
+                <span>📚</span>
+                <h1 class="logo-text">منصة لغة الضاد</h1>
+            </div>
+            <nav class="nav-links">
+                <span id="welcome-student" class="welcome-text"></span>
+                <button onclick="logout()" class="btn-logout">تسجيل الخروج</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="dashboard-section">
+        <div class="container">
+
+            <div class="dashboard-header">
+                <div>
+                    <h2 id="page-title">لوحة تحكم الطالب</h2>
+                    <p id="page-subtitle">تابع اختباراتك المتاحة وسجل اختباراتك السابقة</p>
+                </div>
+                <div class="student-badge-box">
+                    <span class="active-dot"></span> حساب مسجل
+                </div>
+            </div>
+
+            <h3 style="margin-bottom: 20px; font-size: 1.3rem; color: var(--primary);">🎯 اختبارات متاحة للحل</h3>
+            <div class="exams-grid" id="exams-container" style="margin-bottom: 40px;">
+                </div>
+
+            <h3 style="margin-bottom: 20px; font-size: 1.3rem; color: var(--accent);">📋 سجل الاختبارات المنجزة (مراجعة الإجابات)</h3>
+            <div class="exams-grid" id="finished-exams-container">
+                </div>
+
+        </div>
+    </main>
+
+    <footer class="main-footer">
+        <div class="container">
+            <p>جميع الحقوق محفوظة © منصة لغة الضاد التعليمية 2026</p>
+        </div>
+    </footer>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script src="js/firebase-config.js"></script>
+
+    <script src="js/exams.js"></script>
+</body>
+</html>

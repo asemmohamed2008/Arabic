@@ -1,0 +1,230 @@
+let timerInterval;
+let timeLeftInSeconds = 0;
+let currentExamData = null;
+let currentExamId = null;
+
+function showToast(message, type = 'success') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `custom-toast ${type === 'success' ? 'toast-success' : 'toast-error'}`;
+    toast.innerHTML = `
+        <span class="toast-icon">${type === 'success' ? '✨' : '⚠️'}</span>
+        <span>${message}</span>
+    `;
+
+    container.appendChild(toast);
+    setTimeout(() => { toast.remove(); }, 3000);
+}
+
+window.onload = async function() {
+    const savedUser = JSON.parse(localStorage.getItem('studentSession'));
+    if (!savedUser || !savedUser.isRegistered) {
+        showToast('يجب تسجيل الدخول أولاً!', 'error');
+        setTimeout(() => window.location.href = 'login.html', 1000);
+        return;
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    currentExamId = urlParams.get('id');
+
+    console.log("الـ ID المطلوب جلبه من الرابط:", currentExamId);
+
+    if (!currentExamId) {
+        showToast('عذراً، معرف الامتحان غير موجود في الرابط!', 'error');
+        setTimeout(() => window.location.href = 'exams.html', 1500);
+        return;
+    }
+
+    try {
+        // جلب الامتحان من فايربيس
+        const docRef = await db.collection('exams').doc(currentExamId.trim()).get();
+
+        if (!docRef.exists) {
+            console.error("الوثيقة غير موجودة في كولكشن exams بهذا الـ ID:", currentExamId);
+            showToast('هذا الامتحان غير مسجل على السيرفر!', 'error');
+            setTimeout(() => window.location.href = 'exams.html', 1500);
+            return;
+        }
+
+        currentExamData = docRef.data();
+        console.log("تم جلب بيانات الامتحان بنجاح:", currentExamData);
+
+        // ضبط الوقت
+        let timeMinutes = 1; // الافتراضي لو مش محدد
+        if (currentExamData.time) {
+            const parsedTime = parseInt(currentExamData.time);
+            if (!isNaN(parsedTime)) timeMinutes = parsedTime;
+        }
+
+        const titleHeader = document.getElementById('exam-title-header');
+        if (titleHeader) titleHeader.innerText = currentExamData.title || "امتحان نحو";
+
+        timeLeftInSeconds = timeMinutes * 60;
+        startTimer();
+        renderQuestions();
+
+    } catch (error) {
+        console.error("خطأ تقني أثناء جلب الامتحان من فايربيس:", error);
+
+        const container = document.getElementById('exam-form-container');
+        if (container) {
+            container.innerHTML = `<p style="color: #ef4444; text-align: center; padding: 20px;">حدث خطأ أثناء تحميل الامتحان من السيرفر. التفاصيل: ${error.message}</p>`;
+        }
+    }
+};
+
+function startTimer() {
+    const timerDisplay = document.getElementById('time-left');
+    timerInterval = setInterval(() => {
+        let minutes = Math.floor(timeLeftInSeconds / 60);
+        let seconds = timeLeftInSeconds % 60;
+        minutes = minutes < 10 ? '0' + minutes : minutes;
+        seconds = seconds < 10 ? '0' + seconds : seconds;
+        if (timerDisplay) timerDisplay.innerText = `${minutes}:${seconds}`;
+
+        if (timeLeftInSeconds <= 0) {
+            clearInterval(timerInterval);
+            showToast('انتهى وقت الامتحان! سيتم تسليم إجاباتك أوتوماتيكياً.', 'error');
+            submitExam(true);
+        }
+        timeLeftInSeconds--;
+    }, 1000);
+}
+
+function renderQuestions() {
+    const container = document.getElementById('exam-form-container');
+    if (!container) return;
+    container.innerHTML = "";
+
+    const questionsList = currentExamData.questions || currentExamData.questionsList || [];
+
+    if (questionsList.length === 0) {
+        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">عذراً، هذا الامتحان لا يحتوي على أسئلة مضافة حالياً.</p>`;
+        return;
+    }
+
+    questionsList.forEach((q, index) => {
+        let optionsHTML = '';
+        const options = q.options || q.choices || [];
+
+        options.forEach((opt, optIndex) => {
+            optionsHTML += `
+                <label style="display: flex; align-items: center; gap: 10px; background: var(--bg-main); padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; margin-bottom: 10px; transition: var(--transition);">
+                    <input type="radio" name="question-${index}" value="${optIndex}" style="transform: scale(1.2);">
+                    <span style="font-size: 1rem; color: var(--text-light);">${opt}</span>
+                </label>
+            `;
+        });
+
+        const qCard = document.createElement('div');
+        qCard.className = 'exam-card';
+        qCard.style.marginBottom = '20px';
+
+        const qText = q.text || q.question || q.title || `السؤال رقم ${index + 1}`;
+
+        qCard.innerHTML = `
+            <h4 style="margin-bottom: 15px; font-size: 1.1rem; color: var(--text-light);">السؤال (${index + 1}): ${qText}</h4>
+            <div class="options-group">
+                ${optionsHTML}
+            </div>
+        `;
+        container.appendChild(qCard);
+    });
+}
+
+// دالة لتحديث نقاط الطالب وإضافتها لرصيده في فايربيس
+async function updateStudentPoints(username, earnedScore) {
+    try {
+        const studentQuery = await db.collection('students').where('username', '==', username).get();
+        if (!studentQuery.empty) {
+            const studentDoc = studentQuery.docs[0];
+            const currentPoints = studentDoc.data().totalPoints || 0;
+
+            await db.collection('students').doc(studentDoc.id).update({
+                totalPoints: currentPoints + earnedScore
+            });
+            console.log(`تم إضافة ${earnedScore} نقطة بنجاح للطالب ${username}`);
+        }
+    } catch (e) {
+        console.error("خطأ أثناء تحديث نقاط الطالب:", e);
+    }
+}
+
+async function submitExam(isTimeout = false) {
+    const questionsList = currentExamData.questions || currentExamData.questionsList || [];
+    let totalQuestions = questionsList.length;
+
+    if (!isTimeout) {
+        for (let i = 0; i < totalQuestions; i++) {
+            const selectedOption = document.querySelector(`input[name="question-${i}"]:checked`);
+            if (!selectedOption) {
+                showToast(`لم تقم بالإجابة على السؤال رقم (${i + 1}). يجب الإجابة على الكل!`, 'error');
+                return;
+            }
+        }
+    }
+
+    clearInterval(timerInterval);
+
+    let score = 0;
+    let studentAnswers = {};
+
+    questionsList.forEach((q, i) => {
+        const selectedOption = document.querySelector(`input[name="question-${i}"]:checked`);
+        let chosenIndex = selectedOption ? parseInt(selectedOption.value) : -1;
+        studentAnswers[i] = chosenIndex;
+
+        const correctIndex = q.correct !== undefined ? q.correct : q.correctAnswer;
+        if (chosenIndex === correctIndex) {
+            score++;
+        }
+    });
+
+    const savedUser = JSON.parse(localStorage.getItem('studentSession'));
+
+    // تحديث وإرسال النقاط لفايربيس فوراً بناءً على الدرجة
+    if (savedUser && savedUser.username) {
+        await updateStudentPoints(savedUser.username, score * 10); // كل إجابة صحيحة تمنح 10 نقاط مثلاً
+    }
+
+    let resultsKey = `results_${savedUser.username}`;
+    let allResults = JSON.parse(localStorage.getItem(resultsKey)) || {};
+
+    allResults[currentExamId] = {
+        score: score,
+        total: totalQuestions,
+        percentage: totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0,
+        answers: studentAnswers
+    };
+
+    localStorage.setItem(resultsKey, JSON.stringify(allResults));
+
+    const container = document.getElementById('exam-form-container');
+    container.innerHTML = `
+        <div class="exam-card" style="text-align: center; padding: 40px;">
+            <div style="font-size: 4rem; margin-bottom: 15px;">🏆</div>
+            <h2 style="font-size: 2rem; color: var(--primary); margin-bottom: 10px;">تم تسليم الامتحان بنجاح!</h2>
+            <p style="color: var(--text-muted); margin-bottom: 25px;">${isTimeout ? 'انتهى وقت الامتحان المحدد للإجابة' : 'شكراً لتركيزك وحل الاختبار'}</p>
+
+            <div style="background: var(--bg-main); padding: 20px; border-radius: 12px; border: 1px solid var(--border); display: inline-block; margin-bottom: 30px; min-width: 250px;">
+                <h3 style="font-size: 1.5rem; color: var(--accent); margin-bottom: 5px;">نتيجتك: ${score} / ${totalQuestions}</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">النسبة المئوية: ${totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0}%</p>
+                <p style="color: var(--primary); font-size: 0.85rem; font-weight: bold; margin-top: 8px;">✨ تمت إضافة نقاطك إلى لوحة الشرف!</p>
+            </div>
+
+            <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                <a href="leaderboard.html" class="btn-submit" style="display: inline-block; width: auto; padding: 12px 25px; text-decoration: none; background-color: var(--accent);">🏆 لوحة الشرف</a>
+                <a href="exams.html" class="btn-submit" style="display: inline-block; width: auto; padding: 12px 25px; text-decoration: none;">العودة لصفحة الامتحانات</a>
+            </div>
+        </div>
+    `;
+
+    const submitBtn = document.getElementById('submit-exam-btn');
+    if (submitBtn) submitBtn.style.display = 'none';
+}
