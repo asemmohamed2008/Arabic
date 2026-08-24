@@ -1,1 +1,50 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>غرفة الامتحان - منصة لغة الضاد</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="images/11556ed682a6202096457d95623ca548.jpg">
+</head>
+<body>
 
+    <header class="main-header" style="position: sticky; top: 0; z-index: 1000;">
+        <div class="container nav-container">
+            <div class="logo-box">
+                <span>📝</span>
+                <h1 class="logo-text" id="exam-title-header">جارِ تحميل الامتحان...</h1>
+            </div>
+            <div class="timer-box" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px 15px; border-radius: 8px; color: #ef4444; font-weight: 800; font-size: 1.1rem;">
+                ⏳ الوقت المتبقي: <span id="time-left">--:--</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard-section">
+        <div class="container" style="max-width: 800px;">
+
+            <div id="exam-form-container">
+                </div>
+
+            <button type="button" class="btn-submit" id="submit-exam-btn" onclick="submitExam()" style="margin-top: 30px; padding: 14px; font-size: 1.1rem;">
+                تسليم الامتحان وإنهاء
+            </button>
+
+        </div>
+    </main>
+
+    <footer class="main-footer">
+        <div class="container">
+            <p>جميع الحقوق محفوظة © منصة لغة الضاد التعليمية 2026</p>
+        </div>
+    </footer>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/exam-room.js"></script>
+
+</body>
+</html>
