@@ -74,7 +74,7 @@ window.onload = async function() {
 
         const container = document.getElementById('exam-form-container');
         if (container) {
-            container.innerHTML = `<p style="color: #ef4444; text-align: center; padding: 20px;">حدث خطأ أثناء تحميل الامتحان من السيرفر. التفاصيل: ${error.message}</p>`;
+            container.innerHTML = `<div style="text-align: center; padding: 30px;"><p style="color: #ef4444; font-size: 1.1rem; font-weight: bold; margin-bottom: 10px;">عذراً، حدث خطأ أثناء تحميل الامتحان من السيرفر.</p><p style="color: var(--text-muted); font-size: 0.9rem;">تفاصيل الخطأ: ${error.message}</p></div>`;
         }
     }
 };
@@ -156,6 +156,25 @@ async function updateStudentPoints(username, earnedScore) {
     }
 }
 
+// دالة حفظ نتيجة الطالب في فايربيس لتظهر للأدمن فوراً
+async function saveExamResultToFirebase(examId, studentUsername, score, total, percentage, answers) {
+    try {
+        const docId = `${studentUsername}_${examId}`;
+        await db.collection('exam_results').doc(docId).set({
+            examId: examId,
+            username: studentUsername,
+            score: score,
+            total: total,
+            percentage: percentage,
+            answers: answers,
+            submittedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log("تم حفظ نتيجة الطالب في قاعدة البيانات بنجاح!");
+    } catch (error) {
+        console.error("خطأ أثناء حفظ النتيجة في فايربيس:", error);
+    }
+}
+
 async function submitExam(isTimeout = false) {
     const questionsList = currentExamData.questions || currentExamData.questionsList || [];
     let totalQuestions = questionsList.length;
@@ -187,10 +206,11 @@ async function submitExam(isTimeout = false) {
     });
 
     const savedUser = JSON.parse(localStorage.getItem('studentSession'));
+    const percentageVal = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
 
-    // تحديث وإرسال النقاط لفايربيس فوراً بناءً على الدرجة
     if (savedUser && savedUser.username) {
-        await updateStudentPoints(savedUser.username, score * 10); // كل إجابة صحيحة تمنح 10 نقاط مثلاً
+        await updateStudentPoints(savedUser.username, score * 10);
+        await saveExamResultToFirebase(currentExamId, savedUser.username, score, totalQuestions, percentageVal, studentAnswers);
     }
 
     let resultsKey = `results_${savedUser.username}`;
@@ -199,7 +219,7 @@ async function submitExam(isTimeout = false) {
     allResults[currentExamId] = {
         score: score,
         total: totalQuestions,
-        percentage: totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0,
+        percentage: percentageVal,
         answers: studentAnswers
     };
 
@@ -214,8 +234,8 @@ async function submitExam(isTimeout = false) {
 
             <div style="background: var(--bg-main); padding: 20px; border-radius: 12px; border: 1px solid var(--border); display: inline-block; margin-bottom: 30px; min-width: 250px;">
                 <h3 style="font-size: 1.5rem; color: var(--accent); margin-bottom: 5px;">نتيجتك: ${score} / ${totalQuestions}</h3>
-                <p style="color: var(--text-muted); font-size: 0.9rem;">النسبة المئوية: ${totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0}%</p>
-                <p style="color: var(--primary); font-size: 0.85rem; font-weight: bold; margin-top: 8px;">✨ تمت إضافة نقاطك إلى لوحة الشرف!</p>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">النسبة المئوية: ${percentageVal}%</p>
+                <p style="color: var(--primary); font-size: 0.85rem; font-weight: bold; margin-top: 8px;">✨ تمت إضافة نقاطك وإرسال النتيجة للأستاذة!</p>
             </div>
 
             <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
