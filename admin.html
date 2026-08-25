@@ -230,16 +230,29 @@
             }
         }
 
-        // جلب وعرض الامتحانات (المسودات والمنشورة)
+        // جلب وعرض الامتحانات والنتائج مباشرة من فايربيس
         async function loadExamsData() {
             const draftsTbody = document.getElementById('drafts-table-body');
             const examsTbody = document.getElementById('exams-manage-table-body');
 
             try {
-                const snapshot = await db.collection('exams').get();
+                const [examsSnapshot, resultsSnapshot] = await Promise.all([
+                    db.collection('exams').get(),
+                    db.collection('exam_results').get()
+                ]);
+
                 allExamsData = [];
-                snapshot.forEach(doc => {
+                examsSnapshot.forEach(doc => {
                     allExamsData.push({ id: doc.id, ...doc.data() });
+                });
+
+                let examResultsCount = {};
+                resultsSnapshot.forEach(doc => {
+                    const resData = doc.data();
+                    const eId = resData.examId;
+                    if (eId) {
+                        examResultsCount[eId] = (examResultsCount[eId] || 0) + 1;
+                    }
                 });
 
                 const gradeLabels = {
@@ -249,7 +262,6 @@
                     "3-sec": "الصف الثالث الثانوي"
                 };
 
-                // فصل الامتحانات إلى مسودات ومنشورة
                 const drafts = allExamsData.filter(exam => exam.isPublished === false);
                 const publishedExams = allExamsData.filter(exam => exam.isPublished === true || exam.isPublished === undefined);
 
@@ -276,7 +288,7 @@
                     });
                 }
 
-                // 2. عرض الامتحانات النشطة المنشورة
+                // 2. عرض الامتحانات النشطة والعدد الصحيح من فايربيس
                 if (publishedExams.length === 0) {
                     examsTbody.innerHTML = `<tr><td colspan="6" style="padding: 25px; text-align: center; color: var(--text-muted);">لا توجد امتحانات منشورة حالياً.</td></tr>`;
                 } else {
@@ -285,11 +297,7 @@
                         const tr = document.createElement('tr');
                         tr.style.borderBottom = '1px solid var(--border)';
 
-                        let studentsCount = 0;
-                        allStudentsData.forEach(student => {
-                            let res = JSON.parse(localStorage.getItem(`results_${student.username}`)) || {};
-                            if (res[exam.id]) studentsCount++;
-                        });
+                        const studentsCount = examResultsCount[exam.id] || 0;
 
                         tr.innerHTML = `
                             <td style="padding: 15px; font-weight: bold; color: var(--text-light);">${exam.title || 'بدون عنوان'}</td>
@@ -312,7 +320,6 @@
             }
         }
 
-        // نشر مسودة محفوظة
         async function publishDraft(examId, examTitle) {
             if (!confirm(`هل أنت متأكد من رغبتك في نشر امتحان "${examTitle}" للطلاب الآن؟`)) return;
             try {
@@ -325,7 +332,6 @@
             }
         }
 
-        // تعديل امتحان أو مسودة
         function editExam(examId) {
             const exam = allExamsData.find(e => e.id === examId);
             if (!exam) return;
@@ -339,7 +345,6 @@
             document.getElementById('form-section-title').innerText = "✏️ تعديل تفاصيل الامتحان";
             document.getElementById('generate-btn').innerText = "توليد خانات لتعديل الأسئلة ⬇️";
 
-            // توليد الخانات وملئها بالبيانات القديمة
             generateQuestionInputsForEdit(exam.questions);
             window.scrollTo({ top: 0, behavior: 'smooth' });
             showToast("تم جلب بيانات الامتحان للتعديل، قم بتعديل ما تريد ثم احفظه!", "success");
@@ -389,7 +394,6 @@
             container.innerHTML = html;
         }
 
-        // دالة حذف امتحان أو مسودة نهائياً
         async function deleteExam(examId, examTitle) {
             if (!confirm(`هل أنت متأكد من رغبتك في حذف امتحان "${examTitle}" نهائياً من السيرفر؟`)) return;
 
@@ -526,7 +530,6 @@
             showToast("تم توليد حقول الأسئلة بنجاح، قم بملئها ثم احفظها كمسودة!", "success");
         }
 
-        // حفظ الامتحان الجديد كمسودة (isPublished: false)
         async function publishExamWithQuestions(count) {
             const title = document.getElementById('exam-title').value.trim();
             const grade = document.getElementById('exam-grade').value;
@@ -566,7 +569,7 @@
                 time: time,
                 questionsCount: count,
                 questions: questionsList,
-                isPublished: false, // مسودة افتراضياً
+                isPublished: false,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
@@ -582,7 +585,6 @@
             }
         }
 
-        // حفظ التعديلات على مسودة أو امتحان موجود
         async function saveExamChanges(count) {
             const examId = document.getElementById('editing-exam-id').value;
             const title = document.getElementById('exam-title').value.trim();
@@ -629,7 +631,6 @@
                 await db.collection('exams').doc(examId).update(updatedData);
                 showToast("💾 تم تحديث وحفظ تفاصيل الامتحان بنجاح!", "success");
 
-                // إعادة تعيين النموذج لشكل الإنشاء العادي
                 document.getElementById('editing-exam-id').value = "";
                 document.getElementById('exam-meta-form').reset();
                 document.getElementById('dynamic-questions-container').innerHTML = "";
