@@ -17,17 +17,17 @@
                 <h1 class="logo-text" id="student-main-title">سجل تفاصيل الطالب</h1>
             </div>
             <nav class="nav-links">
-                <a href="admin.html" class="btn-back-dashboard">
+                <a href="admin.html" class="btn-back-dashboard" style="background-color: var(--text-muted); text-decoration: none; padding: 8px 15px; border-radius: 6px; color: #fff;">
                     <span>⬅</span> العودة لوحة المعلمة
                 </a>
             </nav>
         </div>
     </header>
 
-    <main class="dashboard-section">
+    <main class="dashboard-section" style="padding: 30px 0;">
         <div class="container" style="max-width: 900px;">
 
-            <div class="exam-card" style="margin-bottom: 30px; border-color: var(--primary);">
+            <div class="exam-card" style="margin-bottom: 30px; border-color: var(--primary); padding: 20px;">
                 <h2 id="student-name-heading" style="color: var(--primary); margin-bottom: 10px;">اسم الطالب: --</h2>
                 <p id="student-meta-info" style="color: var(--text-muted); font-size: 1rem;">الصف الدراسي: -- | مفتاح الدخول: --</p>
             </div>
@@ -41,7 +41,7 @@
         </div>
     </main>
 
-    <footer class="main-footer">
+    <footer class="main-footer" style="padding: 20px 0; text-align: center; margin-top: 40px;">
         <div class="container">
             <p>جميع الحقوق محفوظة © منصة لغة الضاد التعليمية 2026</p>
         </div>
@@ -72,7 +72,7 @@
                 return;
             }
 
-            // البحث عن بيانات الطالب
+            // 1. جلب بيانات الطالب من فايربيس
             let student = null;
             try {
                 const docRef = await db.collection('students').where('username', '==', targetUsername).get();
@@ -96,120 +96,124 @@
 
             document.getElementById('student-main-title').innerText = `سجل الطالب: ${student.username}`;
             document.getElementById('student-name-heading').innerText = `👤 الطالب: ${student.username}`;
-            document.getElementById('student-meta-info').innerHTML = `📚 الصف الدراسي: <strong>${gradeLabels[student.grade] || student.grade}</strong> | مفتاح الدخول: <code style="color: var(--accent);">${student.usedKey || 'غير معروف'}</code>`;
-
-            // جلب نتائج الطالب المخزنة محلياً
-            const resultsKey = `results_${student.username}`;
-            const studentResults = JSON.parse(localStorage.getItem(resultsKey)) || {};
+            document.getElementById('student-meta-info').innerHTML = `📚 الصف الدراسي: <strong>${gradeLabels[student.grade] || student.grade}</strong> | مفتاح الدخول: <code style="color: var(--accent);">${student.usedKey || 'غير مسجل'}</code>`;
 
             const container = document.getElementById('student-exams-details-container');
             container.innerHTML = "";
 
-            const examIds = Object.keys(studentResults);
+            try {
+                // 2. جلب نتائج الطالب مباشرة من كوليكشن exam_results في فايربيس
+                const resultsSnapshot = await db.collection('exam_results').where('username', '==', targetUsername).get();
 
-            if (examIds.length === 0) {
-                container.innerHTML = `
-                    <div class="exam-card" style="text-align: center; padding: 30px;">
-                        <p style="color: var(--text-muted); font-size: 1.1rem;">هذا الطالب لم يقم بأي اختبار حتى الآن.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            // جلب تفاصيل كل امتحان حلّه الطالب من فايربيس أونلاين
-            for (const examId of examIds) {
-                const resData = studentResults[examId];
-                let examData = null;
-
-                try {
-                    const examDoc = await db.collection('exams').doc(examId).get();
-                    if (examDoc.exists) {
-                        examData = examDoc.data();
-                    }
-                } catch (err) {
-                    console.error("خطأ في جلب الامتحان:", err);
+                if (resultsSnapshot.empty) {
+                    container.innerHTML = `
+                        <div class="exam-card" style="text-align: center; padding: 30px;">
+                            <p style="color: var(--text-muted); font-size: 1.1rem;">هذا الطالب لم يقم بأي اختبار حتى الآن.</p>
+                        </div>
+                    `;
+                    return;
                 }
 
-                if (!examData) continue;
+                // 3. معالجة كل نتيجة امتحان حلها الطالب
+                for (const doc of resultsSnapshot.docs) {
+                    const resData = doc.data();
+                    const examId = resData.examId;
+                    if (!examId) continue;
 
-                const questionsList = examData.questions || examData.questionsList || [];
-                let wrongQuestionsHTML = "";
-                let wrongCount = 0;
+                    let examData = null;
+                    try {
+                        const examDoc = await db.collection('exams').doc(examId).get();
+                        if (examDoc.exists) {
+                            examData = examDoc.data();
+                        }
+                    } catch (err) {
+                        console.error("خطأ في جلب الامتحان:", err);
+                    }
 
-                questionsList.forEach((q, index) => {
-                    // دعم قراءة الإجابة المختارة للطالب سواء بالـ index أو بالـ id
-                    const studentChosen = resData.answers[index] !== undefined ? resData.answers[index] : resData.answers[q.id];
-                    const options = q.options || q.choices || [];
-                    const correctIndex = q.correct !== undefined ? q.correct : q.correctAnswer;
-                    const qText = q.text || q.question || q.title || `السؤال رقم ${index + 1}`;
-                    const qExplanation = q.explanation || "لا يوجد شرح مضاف لهذا السؤال.";
+                    if (!examData) continue;
 
-                    if (studentChosen !== correctIndex) {
-                        wrongCount++;
-                        let optionsHTML = "";
-                        options.forEach((opt, optIndex) => {
-                            let styleAttr = "background: var(--bg-main); border: 1px solid var(--border); color: var(--text-light);";
-                            let badgeText = "";
+                    const questionsList = examData.questions || examData.questionsList || [];
+                    let wrongQuestionsHTML = "";
+                    let wrongCount = 0;
 
-                            if (optIndex === correctIndex) {
-                                styleAttr = "background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #10b981; font-weight: bold;";
-                                badgeText = " ✓ (الإجابة الصحيحة)";
-                            } else if (optIndex === studentChosen) {
-                                styleAttr = "background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #ef4444;";
-                                badgeText = " ✗ (إجابة الطالب الخاطئة)";
-                            }
+                    questionsList.forEach((q, index) => {
+                        const studentChosen = resData.answers && (resData.answers[index] !== undefined ? resData.answers[index] : resData.answers[q.id]);
+                        const options = q.options || q.choices || [];
+                        const correctIndex = q.correct !== undefined ? q.correct : q.correctAnswer;
+                        const qText = q.text || q.question || q.title || `السؤال رقم ${index + 1}`;
+                        const qExplanation = q.explanation || "لا يوجد شرح مضاف لهذا السؤال.";
 
-                            optionsHTML += `
-                                <div style="padding: 10px 14px; border-radius: 8px; margin-bottom: 6px; font-size: 0.95rem; ${styleAttr}">
-                                    ${opt} ${badgeText}
+                        if (studentChosen !== correctIndex) {
+                            wrongCount++;
+                            let optionsHTML = "";
+                            options.forEach((opt, optIndex) => {
+                                let styleAttr = "background: var(--bg-main); border: 1px solid var(--border); color: var(--text-light);";
+                                let badgeText = "";
+
+                                if (optIndex === correctIndex) {
+                                    styleAttr = "background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #10b981; font-weight: bold;";
+                                    badgeText = " ✓ (الإجابة الصحيحة)";
+                                } else if (optIndex === studentChosen) {
+                                    styleAttr = "background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #ef4444;";
+                                    badgeText = " ✗ (إجابة الطالب الخاطئة)";
+                                }
+
+                                optionsHTML += `
+                                    <div style="padding: 10px 14px; border-radius: 8px; margin-bottom: 6px; font-size: 0.95rem; ${styleAttr}">
+                                        ${opt} ${badgeText}
+                                    </div>
+                                `;
+                            });
+
+                            wrongQuestionsHTML += `
+                                <div style="background: var(--bg-main); border: 1px solid var(--border); padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                                    <h5 style="margin-bottom: 10px; color: var(--text-light); font-size: 1rem;">${qText}</h5>
+                                    <div style="margin-bottom: 10px;">${optionsHTML}</div>
+                                    <div style="background: rgba(59, 130, 246, 0.08); border-left: 4px solid var(--primary); padding: 10px; border-radius: 4px; font-size: 0.85rem; color: var(--text-muted);">
+                                        💡 <strong>الشرح والتوضيح:</strong> ${qExplanation}
+                                    </div>
                                 </div>
                             `;
-                        });
+                        }
+                    });
 
-                        wrongQuestionsHTML += `
-                            <div style="background: var(--bg-main); border: 1px solid var(--border); padding: 15px; border-radius: 10px; margin-bottom: 15px;">
-                                <h5 style="margin-bottom: 10px; color: var(--text-light); font-size: 1rem;">${qText}</h5>
-                                <div style="margin-bottom: 10px;">${optionsHTML}</div>
-                                <div style="background: rgba(59, 130, 246, 0.08); border-left: 4px solid var(--primary); padding: 10px; border-radius: 4px; font-size: 0.85rem; color: var(--text-muted);">
-                                    💡 <strong>الشرح والتوضيح:</strong> ${qExplanation}
-                                </div>
-                            </div>
-                        `;
+                    if (wrongCount === 0) {
+                        wrongQuestionsHTML = `<p style="color: #10b981; font-weight: bold; text-align: center; padding: 10px;">🎉 ممتاز! هذا الطالب أجاب على جميع أسئلة الامتحان بشكل صحيح ولم يرتكب أي أخطاء.</p>`;
                     }
-                });
 
-                if (wrongCount === 0) {
-                    wrongQuestionsHTML = `<p style="color: #10b981; font-weight: bold; text-align: center; padding: 10px;">🎉 ممتاز! هذا الطالب أجاب على جميع أسئلة الامتحان بشكل صحيح ولم يرتكب أي أخطاء.</p>`;
+                    // بطاقة الامتحان بتصميم Accordion انسيابي
+                    const examCardBox = document.createElement('div');
+                    examCardBox.className = 'exam-card';
+                    examCardBox.style.marginBottom = '20px';
+                    examCardBox.style.padding = '0';
+                    examCardBox.style.overflow = 'hidden';
+
+                    examCardBox.innerHTML = `
+                        <div class="accordion-header" onclick="toggleAccordion(this)" style="padding: 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: rgba(59, 130, 246, 0.03); transition: background 0.3s;">
+                            <div>
+                                <h3 style="color: var(--primary); font-size: 1.1rem; margin-bottom: 5px;">📖 ${examData.title || "امتحان"}</h3>
+                                <span style="color: var(--text-muted); font-size: 0.9rem;">اضغط هنا لعرض تفاصيل الأخطاء والإجابات</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <span style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; color: #10b981; padding: 6px 14px; border-radius: 8px; font-weight: bold; font-size: 0.95rem;">
+                                    الدرجة: ${resData.score} / ${resData.total} (${resData.percentage}%)
+                                </span>
+                                <span class="arrow-icon" style="font-size: 1.2rem; transition: transform 0.3s; color: var(--text-muted);">▼</span>
+                            </div>
+                        </div>
+                        <div class="accordion-body" style="max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; padding: 0 20px;">
+                            <div style="padding-top: 15px; border-top: 1px solid var(--border); margin-bottom: 20px;">
+                                <h4 style="margin-bottom: 15px; font-size: 1rem; color: var(--accent);">⚠️ الأسئلة التي اخطأ فيها الطالب فقط:</h4>
+                                ${wrongQuestionsHTML}
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(examCardBox);
                 }
 
-                // عرض بطاقة الامتحان للطالب بتصميم Accordion انسيابي
-                const examCardBox = document.createElement('div');
-                examCardBox.className = 'exam-card';
-                examCardBox.style.marginBottom = '20px';
-                examCardBox.style.padding = '0';
-                examCardBox.style.overflow = 'hidden';
-
-                examCardBox.innerHTML = `
-                    <div class="accordion-header" onclick="toggleAccordion(this)" style="padding: 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: rgba(59, 130, 246, 0.03); transition: background 0.3s;">
-                        <div>
-                            <h3 style="color: var(--primary); font-size: 1.1rem; margin-bottom: 5px;">📖 ${examData.title || "امتحان"}</h3>
-                            <span style="color: var(--text-muted); font-size: 0.9rem;">اضغط هنا لعرض تفاصيل الأخطاء والإجابات</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 15px;">
-                            <span style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; color: #10b981; padding: 6px 14px; border-radius: 8px; font-weight: bold; font-size: 0.95rem;">
-                                الدرجة: ${resData.score} / ${resData.total} (${resData.percentage}%)
-                            </span>
-                            <span class="arrow-icon" style="font-size: 1.2rem; transition: transform 0.3s; color: var(--text-muted);">▼</span>
-                        </div>
-                    </div>
-                    <div class="accordion-body" style="max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; padding: 0 20px;">
-                        <div style="padding-top: 15px; border-top: 1px solid var(--border); margin-bottom: 20px;">
-                            <h4 style="margin-bottom: 15px; font-size: 1rem; color: var(--accent);">⚠️ الأسئلة التي اخطأ فيها الطالب فقط:</h4>
-                            ${wrongQuestionsHTML}
-                        </div>
-                    </div>
-                `;
-                container.appendChild(examCardBox);
+            } catch (error) {
+                console.error("خطأ في جلب نتائج الطالب من فايربيس:", error);
+                container.innerHTML = `<p style="color: #ef4444; text-align: center; padding: 20px;">حدث خطأ أثناء تحميل السجل من السيرفر.</p>`;
             }
         };
 
